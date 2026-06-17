@@ -1,32 +1,214 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Intersection Observer for Scroll Animations
-    const observerOptions = {
-        threshold: 0.15,
-        rootMargin: "0px 0px -50px 0px"
-    };
 
-    const scrollObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('is-visible');
-                // Optional: Stop observing once animated
-                // scrollObserver.unobserve(entry.target); 
-            }
+    // --- 1. Custom Cyber Cursor ---
+    const cursor = document.querySelector('.cyber-cursor');
+    const trail = document.querySelector('.cyber-cursor-trail');
+    let mouseX = window.innerWidth / 2;
+    let mouseY = window.innerHeight / 2;
+    
+    if (window.matchMedia("(pointer: fine)").matches) {
+        let trailX = window.innerWidth / 2;
+        let trailY = window.innerHeight / 2;
+
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            cursor.style.left = mouseX + 'px';
+            cursor.style.top = mouseY + 'px';
         });
-    }, observerOptions);
 
-    // Initial query for elements
-    document.querySelectorAll('.animate-on-scroll').forEach(el => {
-        scrollObserver.observe(el);
+        const animateTrail = () => {
+            trailX += (mouseX - trailX) * 0.15;
+            trailY += (mouseY - trailY) * 0.15;
+            trail.style.left = trailX + 'px';
+            trail.style.top = trailY + 'px';
+            requestAnimationFrame(animateTrail);
+        };
+        animateTrail();
+
+        document.querySelectorAll('a, button, .glass-card, input, textarea, .core-reactor').forEach(el => {
+            el.addEventListener('mouseenter', () => document.body.classList.add('hovering'));
+            el.addEventListener('mouseleave', () => document.body.classList.remove('hovering'));
+        });
+    }
+
+    // --- 2. LIVE BACKGROUND 1: Warp Speed Starfield ---
+    const warpCanvas = document.getElementById('warpCanvas');
+    const wCtx = warpCanvas.getContext('2d');
+    warpCanvas.width = window.innerWidth;
+    warpCanvas.height = window.innerHeight;
+
+    let stars = [];
+    const numStars = 400;
+    const centerX = warpCanvas.width / 2;
+    const centerY = warpCanvas.height / 2;
+
+    class Star {
+        constructor() {
+            this.x = Math.random() * warpCanvas.width - centerX;
+            this.y = Math.random() * warpCanvas.height - centerY;
+            this.z = Math.random() * warpCanvas.width;
+            this.pz = this.z;
+        }
+        update() {
+            this.z = this.z - 5; // Speed
+            if (this.z < 1) {
+                this.z = warpCanvas.width;
+                this.x = Math.random() * warpCanvas.width - centerX;
+                this.y = Math.random() * warpCanvas.height - centerY;
+                this.pz = this.z;
+            }
+        }
+        draw() {
+            let sx = (this.x / this.z) * warpCanvas.width + centerX;
+            let sy = (this.y / this.z) * warpCanvas.height + centerY;
+            let px = (this.x / this.pz) * warpCanvas.width + centerX;
+            let py = (this.y / this.pz) * warpCanvas.height + centerY;
+
+            this.pz = this.z;
+
+            wCtx.beginPath();
+            wCtx.moveTo(px, py);
+            wCtx.lineTo(sx, sy);
+            wCtx.strokeStyle = `rgba(176, 0, 255, ${1 - this.z / warpCanvas.width})`; // Purple hue
+            wCtx.lineWidth = (1 - this.z / warpCanvas.width) * 3;
+            wCtx.stroke();
+        }
+    }
+    for (let i = 0; i < numStars; i++) stars.push(new Star());
+
+    const animateWarp = () => {
+        wCtx.fillStyle = 'rgba(2, 2, 4, 0.4)'; // Trail effect
+        wCtx.fillRect(0, 0, warpCanvas.width, warpCanvas.height);
+        stars.forEach(star => { star.update(); star.draw(); });
+        requestAnimationFrame(animateWarp);
+    };
+    animateWarp();
+
+    // --- 3. LIVE BACKGROUND 2: Interactive Cyber Network ---
+    const netCanvas = document.getElementById('networkCanvas');
+    const nCtx = netCanvas.getContext('2d');
+    netCanvas.width = window.innerWidth;
+    netCanvas.height = window.innerHeight;
+
+    let particles = [];
+    const numParticles = Math.min(100, window.innerWidth / 15);
+
+    class Particle {
+        constructor() {
+            this.x = Math.random() * netCanvas.width;
+            this.y = Math.random() * netCanvas.height;
+            this.vx = (Math.random() - 0.5) * 1.5;
+            this.vy = (Math.random() - 0.5) * 1.5;
+            this.radius = Math.random() * 2 + 1;
+        }
+        update() {
+            // Move
+            this.x += this.vx;
+            this.y += this.vy;
+
+            // Bounce off walls
+            if (this.x < 0 || this.x > netCanvas.width) this.vx *= -1;
+            if (this.y < 0 || this.y > netCanvas.height) this.vy *= -1;
+
+            // Mouse interaction (repel)
+            let dx = mouseX - this.x;
+            let dy = mouseY - this.y;
+            let distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance < 150) {
+                this.x -= dx * 0.05;
+                this.y -= dy * 0.05;
+            }
+        }
+        draw() {
+            nCtx.beginPath();
+            nCtx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            nCtx.fillStyle = '#00e5ff';
+            nCtx.fill();
+        }
+    }
+    for (let i = 0; i < numParticles; i++) particles.push(new Particle());
+
+    const animateNetwork = () => {
+        nCtx.clearRect(0, 0, netCanvas.width, netCanvas.height);
+        
+        particles.forEach(p => { p.update(); p.draw(); });
+
+        // Draw connections
+        for (let i = 0; i < particles.length; i++) {
+            for (let j = i; j < particles.length; j++) {
+                let dx = particles[i].x - particles[j].x;
+                let dy = particles[i].y - particles[j].y;
+                let distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < 120) {
+                    nCtx.beginPath();
+                    nCtx.strokeStyle = `rgba(0, 229, 255, ${1 - distance/120})`;
+                    nCtx.lineWidth = 1;
+                    nCtx.moveTo(particles[i].x, particles[i].y);
+                    nCtx.lineTo(particles[j].x, particles[j].y);
+                    nCtx.stroke();
+                }
+            }
+            
+            // Connect to mouse
+            let mDx = particles[i].x - mouseX;
+            let mDy = particles[i].y - mouseY;
+            let mDist = Math.sqrt(mDx * mDx + mDy * mDy);
+            if(mDist < 200) {
+                nCtx.beginPath();
+                nCtx.strokeStyle = `rgba(176, 0, 255, ${1 - mDist/200})`; // Purple to mouse
+                nCtx.lineWidth = 1.5;
+                nCtx.moveTo(particles[i].x, particles[i].y);
+                nCtx.lineTo(mouseX, mouseY);
+                nCtx.stroke();
+            }
+        }
+        requestAnimationFrame(animateNetwork);
+    };
+    animateNetwork();
+
+    // --- 4. LIVE Hacker Terminal Logs ---
+    const termContainer = document.getElementById('liveTerminalLogs');
+    const techPhrases = [
+        "Establishing secure socket...",
+        "Bypassing firewall protocols [OK]",
+        "Decrypting RC5 payload...",
+        "Executing SQL injection mitigation",
+        "Analyzing DBMS Normalization schemas",
+        "Routing through proxy node 7A...",
+        "Graph theory matrices compiling...",
+        "GATE CS parameters loaded [477]",
+        "Connection stabilized at IIT Bhilai",
+        "Warning: Intrusion detected. Rerouting..."
+    ];
+
+    setInterval(() => {
+        const p = document.createElement('p');
+        p.className = 'log-line';
+        const time = new Date().toISOString().split('T')[1].slice(0,-1);
+        p.innerText = `[${time}] ${techPhrases[Math.floor(Math.random() * techPhrases.length)]}`;
+        termContainer.appendChild(p);
+        if (termContainer.childElementCount > 15) {
+            termContainer.removeChild(termContainer.firstChild);
+        }
+    }, 1200);
+
+    // Handle Window Resize
+    window.addEventListener('resize', () => {
+        warpCanvas.width = window.innerWidth;
+        warpCanvas.height = window.innerHeight;
+        netCanvas.width = window.innerWidth;
+        netCanvas.height = window.innerHeight;
     });
 
-    // 2. Mobile Menu Functionality
+    // --- 5. Mobile Navbar ---
     const menuToggle = document.querySelector('.mobile-menu-toggle');
     const navbar = document.querySelector('.navbar');
+    const icon = menuToggle.querySelector('i');
 
     menuToggle.addEventListener('click', () => {
         navbar.classList.toggle('active');
-        const icon = menuToggle.querySelector('i');
         icon.classList.toggle('fa-bars');
         icon.classList.toggle('fa-xmark');
     });
@@ -34,147 +216,30 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.nav-link').forEach(link => {
         link.addEventListener('click', () => {
             navbar.classList.remove('active');
-            const icon = menuToggle.querySelector('i');
             icon.classList.add('fa-bars');
             icon.classList.remove('fa-xmark');
         });
     });
 
-    // 3. Active Navigation State Tracking on Scroll
-    const sections = document.querySelectorAll('section');
-    const navLinks = document.querySelectorAll('.nav-link');
-
-    window.addEventListener('scroll', () => {
-        let current = '';
-        sections.forEach(section => {
-            const sectionTop = section.offsetTop;
-            if (pageYOffset >= (sectionTop - 120)) {
-                current = section.getAttribute('id');
-            }
-        });
-
-        navLinks.forEach(link => {
-            link.classList.remove('active');
-            if (link.getAttribute('href').slice(1) === current) {
-                link.classList.add('active');
-            }
-        });
-    });
-
-    // 4. Dynamic Real-time Tech News Feed API Implementation
-    const fetchTechNews = async () => {
-        const newsContainer = document.getElementById('news-container');
-        try {
-            const response = await fetch('https://dev.to/api/articles?tag=computerscience&per_page=3');
-            if (!response.ok) throw new Error('Network response evaluation failed.');
-            
-            const articles = await response.json();
-            newsContainer.innerHTML = ''; 
-
-            articles.forEach((article, index) => {
-                const card = document.createElement('div');
-                // Add animation classes and dynamic stagger delay
-                card.className = `article-card animate-on-scroll delay-${index + 1}`;
-                
-                const tagsHTML = article.tag_list
-                    .slice(0, 3)
-                    .map(tag => `<span class="tag">#${tag}</span>`)
-                    .join('');
-
-                card.innerHTML = `
-                    <div>
-                        <div class="article-tags">${tagsHTML}</div>
-                        <h3>${escapeHTML(article.title)}</h3>
-                        <p>${escapeHTML(article.description || 'Click read more to inspect this technical update.')}</p>
-                    </div>
-                    <a href="${article.url}" target="_blank" class="article-link">Read Article <i class="fa-solid fa-arrow-right"></i></a>
-                `;
-                newsContainer.appendChild(card);
-                // Observe the dynamically added card
-                scrollObserver.observe(card);
-            });
-        } catch (error) {
-            console.error('Error fetching dynamic news:', error);
-            renderFallbackNews();
-        }
-    };
-
-    const renderFallbackNews = () => {
-        const newsContainer = document.getElementById('news-container');
-        const fallbacks = [
-            {
-                title: "Optimizing High-Performance Compute Pipelines in 2026",
-                desc: "An architectural review exploring core cache management efficiencies and instruction parsing variations.",
-                tags: ['performance', 'architecture'],
-                url: "https://dev.to"
-            },
-            {
-                title: "The Shift toward Distributed Cryptographic Consensus Protocols",
-                desc: "Analyzing secure multi-party compute layers across real-time electronic ledger topologies.",
-                tags: ['security', 'cryptography'],
-                url: "https://dev.to"
-            },
-            {
-                title: "Advanced Regularized Normalization Patches in DBMS Engines",
-                desc: "How next-generation transactional query decoders evaluate execution cost-metrics natively.",
-                tags: ['databases', 'systems'],
-                url: "https://dev.to"
-            }
-        ];
-
-        newsContainer.innerHTML = '';
-        fallbacks.forEach((item, index) => {
-            const card = document.createElement('div');
-            card.className = `article-card animate-on-scroll delay-${index + 1}`;
-            const tagsHTML = item.tags.map(t => `<span class="tag">#${t}</span>`).join('');
-            card.innerHTML = `
-                <div>
-                    <div class="article-tags">${tagsHTML}</div>
-                    <h3>${item.title}</h3>
-                    <p>${item.desc}</p>
-                </div>
-                <a href="${item.url}" target="_blank" class="article-link">Read Article <i class="fa-solid fa-arrow-right"></i></a>
-            `;
-            newsContainer.appendChild(card);
-            scrollObserver.observe(card);
-        });
-    };
-
-    const escapeHTML = (str) => {
-        return str.replace(/[&<>'"]/g, 
-            tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-        );
-    };
-
-    fetchTechNews();
-
-    // 5. Client-Side Query Validation
+    // --- 6. Cyber Form Submission ---
     const queryForm = document.getElementById('queryForm');
     const formStatus = document.getElementById('formStatus');
 
     queryForm.addEventListener('submit', (e) => {
         e.preventDefault();
         
-        formStatus.textContent = "Processing message transmitting sequences...";
-        formStatus.className = "form-status success";
+        formStatus.textContent = "UPLOADING DATA PAYLOAD TO MAINFRAME...";
+        formStatus.className = "form-status";
         formStatus.classList.remove('hidden');
 
-        const name = document.getElementById('name').value;
-        const subject = document.getElementById('subject').value;
-
-        // Button loading animation effect
-        const submitBtn = queryForm.querySelector('button[type="submit"]');
-        const originalBtnText = submitBtn.innerHTML;
-        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending...';
-        submitBtn.disabled = true;
-
+        const btn = queryForm.querySelector('button');
+        const ogText = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> ENCRYPTING...';
+        
         setTimeout(() => {
-            formStatus.innerHTML = `<i class="fa-solid fa-circle-check"></i> Thank you, ${name}. Your message regarding "${subject}" was recorded!`;
-            formStatus.className = "form-status success";
+            formStatus.innerHTML = `[ <i class="fa-solid fa-check"></i> UPLOAD COMPLETE. PING SUCCESSFUL. ]`;
             queryForm.reset();
-            
-            submitBtn.innerHTML = originalBtnText;
-            submitBtn.disabled = false;
-        }, 1500);
+            btn.innerHTML = ogText;
+        }, 2500);
     });
 });
